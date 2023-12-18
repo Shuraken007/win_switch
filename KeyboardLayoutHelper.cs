@@ -7,11 +7,13 @@ using System.Diagnostics;
 
 namespace WinSwitchLayout
 {
-    class InvalidLangException : Exception {
-      public InvalidLangException (string str) : base(str) {}
-      public override string ToString() {
-        return Message; // if want to short output
-      }
+    class InvalidLangException : Exception
+    {
+        public InvalidLangException(string str) : base(str) { }
+        public override string ToString()
+        {
+            return Message; // if want to short output
+        }
     }
 
     public class KeyboardLayoutHelper
@@ -127,35 +129,49 @@ namespace WinSwitchLayout
                 Handle = h,
                 layoutId = HandleToLayoutId((int)h),
                 Name = CultureInfo.GetCultureInfo((short)h).Name,
+                shortName = CultureInfo.GetCultureInfo((short)h).Name.Split('-')[1].ToLower(),
             }).ToList();
         }
 
-        public static string GetList() {
+        public static string GetList()
+        {
             var layoutList = GetKeyboardLayoutList();
-            var parsedList = layoutList.Select(keyboardLayout => {
-                return String.Format("{0} {1}", 
-                    keyboardLayout.Name, 
+            var parsedList = layoutList.Select(keyboardLayout =>
+            {
+                return String.Format("{0} {1}",
+                    keyboardLayout.Name,
                     keyboardLayout.layoutId.TrimStart('0'));
             });
-            return String.Join(", ", parsedList); 
+            return String.Join(", ", parsedList);
+        }
+
+        public static string Xkb_Switch_List()
+        {
+            var layoutList = GetKeyboardLayoutList();
+            var parsedList = layoutList.Select(keyboardLayout =>
+            {
+                return keyboardLayout.shortName;
+            });
+            return String.Join(" ", parsedList);
         }
 
         public static bool SetKeyboardLayout(string layoutId)
         {
             return PostMessage(HWND_BROADCAST,
-                (uint) WM_INPUTLANGCHANGEREQUEST,
+                (uint)WM_INPUTLANGCHANGEREQUEST,
                 0,
                 LoadKeyboardLayout(layoutId, (uint)(KLF.SUBSTITUTE_OK | KLF.ACTIVATE)));
         }
 
-        public static string SetLang(String identifier)
+        public static string SetLang(string identifier)
         {
             KeyboardLayout selected = default;
             bool is_known_lang = false;
 
             var layoutList = GetKeyboardLayoutList();
-            foreach (KeyboardLayout k in layoutList) {
-                if ( k.Name.Equals(identifier) || k.layoutId.Contains(identifier) )
+            foreach (KeyboardLayout k in layoutList)
+            {
+                if (k.Name.Equals(identifier) || k.layoutId.Contains(identifier))
                 {
                     selected = k;
                     is_known_lang = true;
@@ -163,19 +179,71 @@ namespace WinSwitchLayout
                 }
             }
 
-            if ( !is_known_lang ) {
+            if (!is_known_lang)
+            {
                 string list = GetList();
                 string errMsg = String.Format(
-                    "unknown language id {0} \n use one of: {1}", 
+                    "unknown language id {0} \n use one of: {1}",
                     identifier, list
                 );
 
                 throw new InvalidLangException(errMsg);
             }
-            
+
             string layoutId = selected.layoutId;
             SetKeyboardLayout(layoutId);
             return GetLang();
         }
+
+        public static string Xkb_Switch_getXkbLayout()
+        {
+            IntPtr handle = GetCurrentLayoutHandle();
+            return CultureInfo.GetCultureInfo((short)handle).Name.Split('-')[1].ToLower();
+        }
+
+        public static void Xkb_Switch_setXkbLayout(string langShortName)
+        {
+            string layoutId = "";
+            bool is_known_lang = false;
+
+            if (langShortName == "us")
+            {
+                layoutId = "00000409";
+                is_known_lang = true;
+            }
+            else if (langShortName == "ru")
+            {
+                layoutId = "00000419";
+                is_known_lang = true;
+            }
+
+            if (!is_known_lang)
+            {
+                var layoutList = GetKeyboardLayoutList();
+                foreach (KeyboardLayout k in layoutList)
+                {
+                    if (k.shortName.Equals(langShortName))
+                    {
+                        layoutId = k.layoutId;
+                        is_known_lang = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!is_known_lang)
+            {
+                string list = GetList();
+                string errMsg = String.Format(
+                    "unknown language id {0} \n use one of: {1}",
+                    langShortName, list
+                );
+
+                throw new InvalidLangException(errMsg);
+            }
+
+            SetKeyboardLayout(layoutId);
+        }
+
     }
 }

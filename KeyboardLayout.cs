@@ -7,5 +7,6 @@ namespace WinSwitchLayout
         public IntPtr Handle { get; set; }
         public string layoutId { get; set; }
         public string Name { get; set; }
+        public string shortName { get; set; }
     }
 }
